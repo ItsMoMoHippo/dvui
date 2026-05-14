@@ -3,12 +3,12 @@ const builtin = @import("builtin");
 const dvui = @import("dvui");
 pub const win32 = @import("win32").everything;
 
-pub const kind: dvui.enums.Backend = .dx11;
+pub const kind: dvui.enums.Backend = .dcomp;
 
-pub const Dx11Backend = @This();
-pub const Context = *align(1) Dx11Backend;
+pub const DCompBackend = @This();
+pub const Context = *align(1) DCompBackend;
 
-const log = std.log.scoped(.Dx11Backend);
+const log = std.log.scoped(.DCompBackend);
 
 pub const WindowState = struct {
     vsync: bool,
