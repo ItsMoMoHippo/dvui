@@ -12,6 +12,7 @@ pub const Backend = enum {
     raylib,
     raylib_zig,
     dx11,
+    dcomp,
     glfw,
     web,
     wio,

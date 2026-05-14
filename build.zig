@@ -744,6 +744,42 @@ pub fn buildBackend(backend: Backend, test_dvui_and_app: bool, dvui_opts_in: Dvu
                 _ = addExample("dx11-app", b.path("examples/app.zig"), test_dvui_and_app, example_opts, dvui_opts);
             }
         },
+        .dcomp => {
+            if (dvui_opts.vertex_index != .u16) {
+                std.log.err("dx11 backend currently requires u16 vertex index", .{});
+                return error.IncompatibleVertexIndex;
+            }
+
+            dvui_opts.setDefaults(.{ .libc = true, .freetype = true, .tiny_file_dialogs = true, .stb_image = true, .tree_sitter = true });
+            if (target.result.os.tag == .windows) {
+                const dcomp_mod = b.addModule("dcomp", .{
+                    .root_source_file = b.path("src/backends/dcomp.zig"),
+                    .target = target,
+                    .optimize = optimize,
+                    .link_libc = true,
+                });
+                dvui_opts.addChecks(dcomp_mod, "dcomp-backend");
+                dvui_opts.addTests(dcomp_mod, "dcomp-backend");
+
+                if (b.lazyDependency("win32", .{})) |zigwin32| {
+                    dcomp_mod.addImport("win32", zigwin32.module("win32"));
+                }
+
+                const dvui_dcomp = addDvuiModule("dvui_dcomp", dvui_opts);
+                dvui_opts.addChecks(dvui_dcomp, "dvui_dcomp");
+                if (test_dvui_and_app) {
+                    dvui_opts.addTests(dvui_dcomp, "dvui_dcomp");
+                }
+
+                linkBackend(dvui_dcomp, dcomp_mod);
+                const example_opts: ExampleOptions = .{
+                    .dvui_mod = dvui_dcomp,
+                    .backend_name = "dcomp-backend",
+                    .backend_mod = dcomp_mod,
+                };
+                _ = addExample("dcomp-app", b.path("examples/app.zig"), test_dvui_and_app, example_opts, dvui_opts);
+            }
+        },
         .glfw => {
             dvui_opts.setDefaults(.{ .libc = true, .freetype = true, .stb_image = true, .tiny_file_dialogs = true, .tree_sitter = true });
 
