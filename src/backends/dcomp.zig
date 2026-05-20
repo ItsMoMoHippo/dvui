@@ -1,7 +1,28 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const dvui = @import("dvui");
-pub const win32 = @import("win32").everything;
+pub const windows = @import("win32");
+// const win32 = windows.everything;
+
+const foundation = windows.foundation;
+const library_loader = windows.system.library_loader;
+const wnd_msg = windows.ui.windows_and_messaging;
+const hi_dpi = windows.ui.hi_dpi;
+const data_exchange = windows.system.data_exchange;
+const memory = windows.system.memory;
+const system_services = windows.system.system_services;
+const windowlongptr = windows.windowlongptr;
+const keyboard_and_mouse = windows.ui.input.keyboard_and_mouse;
+
+const HWND = foundation.HWND;
+const TRUE = windows.zig.TRUE;
+const FALSE = windows.zig.FALSE;
+
+const gdi = windows.graphics.gdi;
+const dwm = windows.graphics.dwm;
+const dxgi = windows.graphics.dxgi;
+const d3d = windows.graphics.direct3d;
+const d3d11 = windows.graphics.direct3d11;
 
 pub const kind: dvui.enums.Backend = .dcomp;
 
@@ -21,11 +42,11 @@ pub const WindowState = struct {
 
     texture_interpolation: std.AutoHashMapUnmanaged(*anyopaque, dvui.enums.TextureInterpolation) = .empty,
 
-    device: *win32.ID3D11Device,
-    device_context: *win32.ID3D11DeviceContext,
-    swap_chain: *win32.IDXGISwapChain,
+    device: *d3d11.ID3D11Device,
+    device_context: *d3d11.ID3D11DeviceContext,
+    swap_chain: *dxgi.IDXGISwapChain,
 
-    render_target: ?*win32.ID3D11RenderTargetView = null,
+    render_target: ?*d3d11.ID3D11RenderTargetView = null,
     dx_options: DirectxOptions = .{},
     /// Should windows events be processed?
     event_processing: bool = true,
@@ -78,18 +99,18 @@ const KeyEvent = struct {
 };
 
 const DirectxOptions = struct {
-    vertex_shader: ?*win32.ID3D11VertexShader = null,
-    vertex_bytes: ?*win32.ID3DBlob = null,
-    pixel_shader: ?*win32.ID3D11PixelShader = null,
-    pixel_bytes: ?*win32.ID3DBlob = null,
-    vertex_layout: ?*win32.ID3D11InputLayout = null,
-    vertex_buffer: ?*win32.ID3D11Buffer = null,
-    index_buffer: ?*win32.ID3D11Buffer = null,
-    texture_view: ?*win32.ID3D11ShaderResourceView = null,
-    sampler_linear: ?*win32.ID3D11SamplerState = null,
-    sampler_nearest: ?*win32.ID3D11SamplerState = null,
-    rasterizer: ?*win32.ID3D11RasterizerState = null,
-    blend_state: ?*win32.ID3D11BlendState = null,
+    vertex_shader: ?*d3d11.ID3D11VertexShader = null,
+    vertex_bytes: ?*d3d11.ID3DBlob = null,
+    pixel_shader: ?*d3d11.ID3D11PixelShader = null,
+    pixel_bytes: ?*d3d.ID3DBlob = null,
+    vertex_layout: ?*d3d11.ID3D11InputLayout = null,
+    vertex_buffer: ?*d3d11.ID3D11Buffer = null,
+    index_buffer: ?*d3d11.ID3D11Buffer = null,
+    texture_view: ?*d3d11.ID3D11ShaderResourceView = null,
+    sampler_linear: ?*d3d11.ID3D11SamplerState = null,
+    sampler_nearest: ?*d3d11.ID3D11SamplerState = null,
+    rasterizer: ?*d3d11.ID3D11RasterizerState = null,
+    blend_state: ?*d3d11.ID3D11BlendState = null,
 
     pub fn deinit(self: DirectxOptions) void {
         // is there really no way to express this better?
@@ -159,11 +180,11 @@ pub const InitOptions = struct {
 
 pub const Directx11Options = struct {
     /// The device
-    device: *win32.ID3D11Device,
+    device: *d3d11.ID3D11Device,
     /// The Context
-    device_context: *win32.ID3D11DeviceContext,
+    device_context: *d3d11.ID3D11DeviceContext,
     /// The Swap chain
-    swap_chain: *win32.IDXGISwapChain,
+    swap_chain: *dxgi.IDXGISwapChain,
 };
 
 const XMFLOAT2 = extern struct { x: f32, y: f32 };
@@ -204,7 +225,7 @@ const shader =
 /// Sets the directx viewport to the internally used dvui.Size
 /// Call this *after* setDimensions
 fn setViewport(state: *WindowState, width: f32, height: f32) void {
-    var vp = win32.D3D11_VIEWPORT{
+    var vp = d3d11.D3D11_VIEWPORT{
         .TopLeftX = 0.0,
         .TopLeftY = 0.0,
         .Width = width,
@@ -221,7 +242,7 @@ pub fn getWindow(context: Context) *dvui.Window {
 
 pub const RegisterClassOptions = struct {
     /// styles in addition to DBLCLICKS
-    style: win32.WNDCLASS_STYLES = .{},
+    style: wnd_msg.WNDCLASS_STYLES = .{},
     // NOTE: we could allow the user to provide their own wndproc which we could
     //       call before or after ours
     //wndproc: ...,
@@ -229,11 +250,11 @@ pub const RegisterClassOptions = struct {
     // NOTE: the dx11 backend uses the first @sizeOf(*anyopaque) bytes, any length
     //       added here will be offset by that many bytes
     window_extra_after_sizeof_ptr: c_int = 0,
-    instance: union(enum) { this_module, custom: ?win32.HINSTANCE } = .this_module,
-    cursor: union(enum) { arrow, custom: ?win32.HICON } = .arrow,
-    icon: ?win32.HICON = null,
-    icon_small: ?win32.HICON = null,
-    bg_brush: ?win32.HBRUSH = null,
+    instance: union(enum) { this_module, custom: ?foundation.HINSTANCE } = .this_module,
+    cursor: union(enum) { arrow, custom: ?wnd_msg.HICON } = .arrow,
+    icon: ?wnd_msg.HICON = null,
+    icon_small: ?wnd_msg.HICON = null,
+    bg_brush: ?wnd_msg.HBRUSH = null,
     menu_name: ?[*:0]const u16 = null,
 };
 
@@ -244,35 +265,39 @@ pub const RegisterClassOptions = struct {
 /// RegisterClass can only be called once for a given name (unless it's been unregistered
 /// via UnregisterClass). Typically there's no reason to unregister a window class.
 pub fn RegisterClass(name: [*:0]const u16, opt: RegisterClassOptions) error{Win32}!void {
-    const wc: win32.WNDCLASSEXW = .{
-        .cbSize = @sizeOf(win32.WNDCLASSEXW),
-        .style = @bitCast(@as(u32, @bitCast(win32.WNDCLASS_STYLES{ .DBLCLKS = 1 })) | @as(u32, @bitCast(opt.style))),
+    const wc: wnd_msg.WNDCLASSEXW = .{
+        .cbSize = @sizeOf(wnd_msg.WNDCLASSEXW),
+        .style = @bitCast(@as(u32, @bitCast(wnd_msg.WNDCLASS_STYLES{ .DBLCLKS = 1 })) | @as(u32, @bitCast(opt.style))),
         .lpfnWndProc = wndProc,
         .cbClsExtra = opt.class_extra,
         .cbWndExtra = @sizeOf(usize) + opt.window_extra_after_sizeof_ptr,
         .hInstance = switch (opt.instance) {
-            .this_module => win32.GetModuleHandleW(null),
+            .this_module => library_loader.GetModuleHandleW(null),
             .custom => |i| i,
         },
         .hIcon = opt.icon,
         .hIconSm = opt.icon_small,
         .hCursor = switch (opt.cursor) {
-            .arrow => win32.LoadCursorW(null, win32.IDC_ARROW),
+            .arrow => wnd_msg.LoadCursorW(null, wnd_msg.IDC_ARROW),
             .custom => |c| c,
         },
         .hbrBackground = opt.bg_brush,
         .lpszMenuName = opt.menu_name,
         .lpszClassName = name,
     };
-    if (0 == win32.RegisterClassExW(&wc)) return error.Win32;
+    if (0 == wnd_msg.RegisterClassExW(&wc)) return error.Win32;
 }
 
 /// Creates a new DirectX window for you, as well as initializes all the
 /// DirectX options for you
 /// The caller just needs to clean up everything by calling `deinit` on the Dx11Backend
 pub fn initWindow(window_state: *WindowState, options: InitOptions) !Context {
-    const style = win32.WS_OVERLAPPEDWINDOW;
-    const style_ex: win32.WINDOW_EX_STYLE = .{ .APPWINDOW = 1, .WINDOWEDGE = 1 };
+    const style = wnd_msg.WS_OVERLAPPEDWINDOW;
+    const style_ex: wnd_msg.WINDOW_EX_STYLE = .{
+        .APPWINDOW = 1,
+        .WINDOWEDGE = 1,
+        .NOREDIRECTIONBITMAP = 1,
+    };
 
     const create_args: CreateWindowArgs = .{
         .window_state = window_state,
@@ -283,21 +308,21 @@ pub fn initWindow(window_state: *WindowState, options: InitOptions) !Context {
     const hwnd = blk: {
         const wnd_title = try std.unicode.utf8ToUtf16LeAllocZ(options.allocator, options.title);
         defer options.allocator.free(wnd_title);
-        break :blk win32.CreateWindowExW(
+        break :blk wnd_msg.CreateWindowExW(
             style_ex,
             options.registered_class,
             wnd_title,
             style,
-            win32.CW_USEDEFAULT,
-            win32.CW_USEDEFAULT,
-            win32.CW_USEDEFAULT,
-            win32.CW_USEDEFAULT,
+            wnd_msg.CW_USEDEFAULT,
+            wnd_msg.CW_USEDEFAULT,
+            wnd_msg.CW_USEDEFAULT,
+            wnd_msg.CW_USEDEFAULT,
             null,
             null,
-            win32.GetModuleHandleW(null),
+            library_loader.GetModuleHandleW(null),
             @ptrCast(@constCast(&create_args)),
-        ) orelse switch (win32.GetLastError()) {
-            win32.ERROR_CANNOT_FIND_WND_CLASS => switch (builtin.mode) {
+        ) orelse switch (foundation.GetLastError()) {
+            foundation.ERROR_CANNOT_FIND_WND_CLASS => switch (builtin.mode) {
                 .Debug => std.debug.panic(
                     "did you forget to call RegisterClass? (class_name='{f}')",
                     .{std.unicode.fmtUtf16Le(std.mem.span(options.registered_class))},
@@ -306,14 +331,19 @@ pub fn initWindow(window_state: *WindowState, options: InitOptions) !Context {
             },
             else => |win32Err| {
                 if (create_args.err) |err| return err;
-                win32.panicWin32("CreateWindow", win32Err);
+                foundation.panicWin32("CreateWindow", win32Err);
             },
         };
     };
 
     switch (preferredColorScheme(@ptrCast(hwnd)) orelse .light) {
         .dark => resToErr(
-            win32.DwmSetWindowAttribute(hwnd, win32.DWMWA_USE_IMMERSIVE_DARK_MODE, &win32.TRUE, @sizeOf(win32.BOOL)),
+            dwm.DwmSetWindowAttribute(
+                hwnd,
+                dwm.DWMWA_USE_IMMERSIVE_DARK_MODE,
+                &windows.zig.TRUE,
+                @sizeOf(windows.foundation.BOOL),
+            ),
             "DwmSetWindowAttribute dark window in initWindow",
         ) catch {},
         .light => {},
@@ -323,42 +353,42 @@ pub fn initWindow(window_state: *WindowState, options: InitOptions) !Context {
     }
 
     if (options.size) |size| {
-        const dpi = win32.GetDpiForWindow(hwnd);
+        const dpi = hi_dpi.GetDpiForWindow(hwnd);
         try boolToErr(@intCast(dpi), "GetDpiForWindow in initWindow");
-        const screen_width = win32.GetSystemMetricsForDpi(@intFromEnum(win32.SM_CXSCREEN), dpi);
-        const screen_height = win32.GetSystemMetricsForDpi(@intFromEnum(win32.SM_CYSCREEN), dpi);
-        var wnd_size: win32.RECT = .{
+        const screen_width = hi_dpi.GetSystemMetricsForDpi(@intFromEnum(wnd_msg.SM_CXSCREEN), dpi);
+        const screen_height = hi_dpi.GetSystemMetricsForDpi(@intFromEnum(wnd_msg.SM_CYSCREEN), dpi);
+        var wnd_size: foundation.RECT = .{
             .left = 0,
             .top = 0,
-            .right = @min(screen_width, @as(i32, @intFromFloat(@round(win32.scaleDpi(f32, size.w, dpi))))),
-            .bottom = @min(screen_height, @as(i32, @intFromFloat(@round(win32.scaleDpi(f32, size.h, dpi))))),
+            .right = @min(screen_width, @as(i32, @intFromFloat(@round(windows.zig.scaleDpi(f32, size.w, dpi))))),
+            .bottom = @min(screen_height, @as(i32, @intFromFloat(@round(windows.zig.scaleDpi(f32, size.h, dpi))))),
         };
         try boolToErr(
-            win32.AdjustWindowRectEx(&wnd_size, style, 0, style_ex),
+            wnd_msg.AdjustWindowRectEx(&wnd_size, style, 0, style_ex),
             "AdjustWindowRectEx in initWindow",
         );
 
         const wnd_width = wnd_size.right - wnd_size.left;
         const wnd_height = wnd_size.bottom - wnd_size.top;
-        try boolToErr(win32.SetWindowPos(
+        try boolToErr(wnd_msg.SetWindowPos(
             hwnd,
             null,
             @divFloor(screen_width - wnd_width, 2),
             @divFloor(screen_height - wnd_height, 2),
             wnd_width,
             wnd_height,
-            win32.SWP_NOCOPYBITS,
+            wnd_msg.SWP_NOCOPYBITS,
         ), "SetWindowPos in initWindow");
     }
     // Returns 0 if the window was previously hidden
-    _ = win32.ShowWindow(hwnd, .{ .SHOWNORMAL = 1 });
-    try boolToErr(win32.UpdateWindow(hwnd), "UpdateWindow in initWindow");
+    _ = wnd_msg.ShowWindow(hwnd, .{ .SHOWNORMAL = 1 });
+    try boolToErr(windows.graphics.gdi.UpdateWindow(hwnd), "UpdateWindow in initWindow");
     return contextFromHwnd(hwnd);
 }
 
 /// Cleanup routine
 pub fn deinit(self: Context) void {
-    if (0 == win32.DestroyWindow(hwndFromContext(self))) win32.panicWin32("DestroyWindow", win32.GetLastError());
+    if (0 == wnd_msg.DestroyWindow(hwndFromContext(self))) windows.zig.panicWin32("DestroyWindow", foundation.GetLastError());
 }
 
 /// Resizes the SwapChain based on the new window size
@@ -367,7 +397,7 @@ pub fn handleSwapChainResizing(self: Context, width: c_uint, height: c_uint) !vo
     const state = stateFromHwnd(hwndFromContext(self));
     cleanupRenderTarget(state);
     try resToErr(
-        state.swap_chain.ResizeBuffers(0, width, height, win32.DXGI_FORMAT_UNKNOWN, 0),
+        state.swap_chain.ResizeBuffers(0, width, height, dxgi.DXGI_FORMAT_UNKNOWN, 0),
         "ResizeBuffers in handleSwapChainResizing",
     );
     try createRenderTarget(state);
@@ -380,13 +410,13 @@ pub const ServiceResult = union(enum) {
 /// Dispatches messages to any/all native OS windows until either the
 /// queue is empty or WM_QUIT/WM_CLOSE are encountered.
 pub fn serviceMessageQueue() ServiceResult {
-    var msg: win32.MSG = undefined;
+    var msg: wnd_msg.MSG = undefined;
     // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-peekmessagea#return-value
-    while (win32.PeekMessageA(&msg, null, 0, 0, win32.PM_REMOVE) != 0) {
-        _ = win32.TranslateMessage(&msg);
+    while (wnd_msg.PeekMessageA(&msg, null, 0, 0, wnd_msg.PM_REMOVE) != 0) {
+        _ = wnd_msg.TranslateMessage(&msg);
         // ignore return value, https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-dispatchmessagew#return-value
-        _ = win32.DispatchMessageW(&msg);
-        if (msg.message == win32.WM_QUIT) {
+        _ = wnd_msg.DispatchMessageW(&msg);
+        if (msg.message == wnd_msg.WM_QUIT) {
             @branchHint(.unlikely);
             return .quit;
         }
@@ -394,35 +424,35 @@ pub fn serviceMessageQueue() ServiceResult {
     return .queue_empty;
 }
 
-fn resToErr(res: win32.HRESULT, what: []const u8) !void {
-    if (win32.SUCCEEDED(res)) return;
+fn resToErr(res: foundation.HRESULT, what: []const u8) !void {
+    if (windows.zig.SUCCEEDED(res)) return;
     std.log.err("{s} failed, hresult=0x{x}", .{ what, res });
     return dvui.Backend.GenericError.BackendError;
 }
 
 /// Check the return value and prints `win32.GetLastError()` on failure
-fn boolToErr(res: win32.BOOL, what: []const u8) !void {
-    if (res != win32.FALSE) return;
+fn boolToErr(res: windows.foundation.BOOL, what: []const u8) !void {
+    if (res != windows.zig.FALSE) return;
     return lastErr(what);
 }
 
 /// prints `win32.GetLastError()`
 fn lastErr(what: []const u8) !void {
-    const err = win32.GetLastError();
+    const err = foundation.GetLastError();
     return win32ToErr(err, what);
 }
 
-fn win32ToErr(err: win32.WIN32_ERROR, what: []const u8) !void {
-    if (err == win32.NO_ERROR) return;
+fn win32ToErr(err: foundation.WIN32_ERROR, what: []const u8) !void {
+    if (err == foundation.NO_ERROR) return;
     std.log.err("{s} failed, error={f}", .{ what, err });
     return dvui.Backend.GenericError.BackendError;
 }
 
 fn initShader(state: *WindowState) !void {
-    var error_message: ?*win32.ID3DBlob = null;
+    var error_message: ?*d3d.ID3DBlob = null;
 
-    var vs_blob: ?*win32.ID3DBlob = null;
-    const compile_shader = win32.D3DCompile(
+    var vs_blob: ?*d3d.ID3DBlob = null;
+    const compile_shader = d3d.D3DCompile(
         shader.ptr,
         shader.len,
         null,
@@ -430,12 +460,12 @@ fn initShader(state: *WindowState) !void {
         null,
         "VSMain",
         "vs_4_0",
-        win32.D3DCOMPILE_ENABLE_STRICTNESS,
+        d3d.D3DCOMPILE_ENABLE_STRICTNESS,
         0,
         &vs_blob,
         &error_message,
     );
-    if (win32.FAILED(compile_shader)) {
+    if (windows.zig.FAILED(compile_shader)) {
         if (error_message) |msg| {
             defer _ = msg.IUnknown.Release();
             const as_str: [*:0]const u8 = @ptrCast(msg.vtable.GetBufferPointer(error_message.?));
@@ -451,8 +481,8 @@ fn initShader(state: *WindowState) !void {
         state.dx_options.vertex_bytes = null;
     }
 
-    var ps_blob: ?*win32.ID3DBlob = null;
-    const ps_res = win32.D3DCompile(
+    var ps_blob: ?*d3d.ID3DBlob = null;
+    const ps_res = d3d.D3DCompile(
         shader.ptr,
         shader.len,
         null,
@@ -460,12 +490,12 @@ fn initShader(state: *WindowState) !void {
         null,
         "PSMain",
         "ps_4_0",
-        win32.D3DCOMPILE_ENABLE_STRICTNESS,
+        d3d.D3DCOMPILE_ENABLE_STRICTNESS,
         0,
         &ps_blob,
         &error_message,
     );
-    if (win32.FAILED(ps_res)) {
+    if (windows.zig.FAILED(ps_res)) {
         if (error_message) |msg| {
             defer _ = msg.IUnknown.Release();
             const as_str: [*:0]const u8 = @ptrCast(msg.vtable.GetBufferPointer(error_message.?));
@@ -501,9 +531,9 @@ fn initShader(state: *WindowState) !void {
 }
 
 fn createRasterizerState(state: *WindowState) !void {
-    var raster_desc = std.mem.zeroes(win32.D3D11_RASTERIZER_DESC);
-    raster_desc.FillMode = win32.D3D11_FILL_MODE.SOLID;
-    raster_desc.CullMode = win32.D3D11_CULL_BACK;
+    var raster_desc = std.mem.zeroes(d3d.D3D11_RASTERIZER_DESC);
+    raster_desc.FillMode = d3d.D3D11_FILL_MODE.SOLID;
+    raster_desc.CullMode = d3d.D3D11_CULL_BACK;
     raster_desc.FrontCounterClockwise = 1;
     raster_desc.DepthClipEnable = 0;
     raster_desc.ScissorEnable = 1;
@@ -520,10 +550,10 @@ fn createRasterizerState(state: *WindowState) !void {
 }
 
 fn createRenderTarget(state: *WindowState) !void {
-    var back_buffer: ?*win32.ID3D11Texture2D = null;
+    var back_buffer: ?*d3d11.ID3D11Texture2D = null;
 
     try resToErr(
-        state.swap_chain.GetBuffer(0, win32.IID_ID3D11Texture2D, @ptrCast(&back_buffer)),
+        state.swap_chain.GetBuffer(0, d3d11.IID_ID3D11Texture2D, @ptrCast(&back_buffer)),
         "GetBuffer in createRenderTarget",
     );
     defer _ = back_buffer.?.IUnknown.Release();
@@ -545,10 +575,34 @@ fn cleanupRenderTarget(state: *WindowState) void {
 }
 
 fn createInputLayout(state: *WindowState) !void {
-    const input_layout_desc = &[_]win32.D3D11_INPUT_ELEMENT_DESC{
-        .{ .SemanticName = "POSITION", .SemanticIndex = 0, .Format = win32.DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = 0, .InputSlotClass = win32.D3D11_INPUT_PER_VERTEX_DATA, .InstanceDataStepRate = 0 },
-        .{ .SemanticName = "COLOR", .SemanticIndex = 0, .Format = win32.DXGI_FORMAT_R32G32B32A32_FLOAT, .InputSlot = 0, .AlignedByteOffset = 12, .InputSlotClass = win32.D3D11_INPUT_PER_VERTEX_DATA, .InstanceDataStepRate = 0 },
-        .{ .SemanticName = "TEXCOORD", .SemanticIndex = 0, .Format = win32.DXGI_FORMAT_R32G32_FLOAT, .InputSlot = 0, .AlignedByteOffset = 28, .InputSlotClass = win32.D3D11_INPUT_PER_VERTEX_DATA, .InstanceDataStepRate = 0 },
+    const input_layout_desc = &[_]d3d11.D3D11_INPUT_ELEMENT_DESC{
+        .{
+            .SemanticName = "POSITION",
+            .SemanticIndex = 0,
+            .Format = dxgi.DXGI_FORMAT_R32G32B32_FLOAT,
+            .InputSlot = 0,
+            .AlignedByteOffset = 0,
+            .InputSlotClass = d3d11.D3D11_INPUT_PER_VERTEX_DATA,
+            .InstanceDataStepRate = 0,
+        },
+        .{
+            .SemanticName = "COLOR",
+            .SemanticIndex = 0,
+            .Format = dxgi.DXGI_FORMAT_R32G32B32A32_FLOAT,
+            .InputSlot = 0,
+            .AlignedByteOffset = 12,
+            .InputSlotClass = d3d11.D3D11_INPUT_PER_VERTEX_DATA,
+            .InstanceDataStepRate = 0,
+        },
+        .{
+            .SemanticName = "TEXCOORD",
+            .SemanticIndex = 0,
+            .Format = dxgi.DXGI_FORMAT_R32G32_FLOAT,
+            .InputSlot = 0,
+            .AlignedByteOffset = 28,
+            .InputSlotClass = d3d11.D3D11_INPUT_PER_VERTEX_DATA,
+            .InstanceDataStepRate = 0,
+        },
     };
 
     const num_elements = input_layout_desc.len;
@@ -567,11 +621,11 @@ fn createInputLayout(state: *WindowState) !void {
 }
 
 fn recreateShaderView(state: *WindowState, texture: *anyopaque) !void {
-    const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture));
+    const tex: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(texture));
 
-    const rvd = win32.D3D11_SHADER_RESOURCE_VIEW_DESC{
-        .Format = win32.DXGI_FORMAT.R8G8B8A8_UNORM,
-        .ViewDimension = win32.D3D_SRV_DIMENSION_TEXTURE2D,
+    const rvd = d3d11.D3D11_SHADER_RESOURCE_VIEW_DESC{
+        .Format = dxgi.DXGI_FORMAT.R8G8B8A8_UNORM,
+        .ViewDimension = d3d.D3D_SRV_DIMENSION_TEXTURE2D,
         .Anonymous = .{
             .Texture2D = .{
                 .MostDetailedMip = 0,
@@ -594,24 +648,24 @@ fn recreateShaderView(state: *WindowState, texture: *anyopaque) !void {
 }
 
 fn createSampler(state: *WindowState, interpolation: dvui.enums.TextureInterpolation) !void {
-    var samp_desc = std.mem.zeroes(win32.D3D11_SAMPLER_DESC);
+    var samp_desc = std.mem.zeroes(d3d11.D3D11_SAMPLER_DESC);
     samp_desc.Filter = switch (interpolation) {
-        .linear => win32.D3D11_FILTER.MIN_MAG_MIP_LINEAR,
-        .nearest => win32.D3D11_FILTER.MIN_MAG_MIP_POINT,
+        .linear => d3d11.D3D11_FILTER.MIN_MAG_MIP_LINEAR,
+        .nearest => d3d11.D3D11_FILTER.MIN_MAG_MIP_POINT,
     };
-    samp_desc.AddressU = win32.D3D11_TEXTURE_ADDRESS_MODE.WRAP;
-    samp_desc.AddressV = win32.D3D11_TEXTURE_ADDRESS_MODE.WRAP;
-    samp_desc.AddressW = win32.D3D11_TEXTURE_ADDRESS_MODE.WRAP;
+    samp_desc.AddressU = d3d11.D3D11_TEXTURE_ADDRESS_MODE.WRAP;
+    samp_desc.AddressV = d3d11.D3D11_TEXTURE_ADDRESS_MODE.WRAP;
+    samp_desc.AddressW = d3d11.D3D11_TEXTURE_ADDRESS_MODE.WRAP;
 
-    var blend_desc = std.mem.zeroes(win32.D3D11_BLEND_DESC);
+    var blend_desc = std.mem.zeroes(d3d11.D3D11_BLEND_DESC);
     blend_desc.RenderTarget[0].BlendEnable = 1;
-    blend_desc.RenderTarget[0].SrcBlend = win32.D3D11_BLEND_ONE;
-    blend_desc.RenderTarget[0].DestBlend = win32.D3D11_BLEND_INV_SRC_ALPHA;
-    blend_desc.RenderTarget[0].BlendOp = win32.D3D11_BLEND_OP_ADD;
-    blend_desc.RenderTarget[0].SrcBlendAlpha = win32.D3D11_BLEND_ONE;
-    blend_desc.RenderTarget[0].DestBlendAlpha = win32.D3D11_BLEND_INV_SRC_ALPHA;
-    blend_desc.RenderTarget[0].BlendOpAlpha = win32.D3D11_BLEND_OP_ADD;
-    blend_desc.RenderTarget[0].RenderTargetWriteMask = @intFromEnum(win32.D3D11_COLOR_WRITE_ENABLE_ALL);
+    blend_desc.RenderTarget[0].SrcBlend = d3d11.D3D11_BLEND_ONE;
+    blend_desc.RenderTarget[0].DestBlend = d3d11.D3D11_BLEND_INV_SRC_ALPHA;
+    blend_desc.RenderTarget[0].BlendOp = d3d11.D3D11_BLEND_OP_ADD;
+    blend_desc.RenderTarget[0].SrcBlendAlpha = d3d11.D3D11_BLEND_ONE;
+    blend_desc.RenderTarget[0].DestBlendAlpha = d3d11.D3D11_BLEND_INV_SRC_ALPHA;
+    blend_desc.RenderTarget[0].BlendOpAlpha = d3d11.D3D11_BLEND_OP_ADD;
+    blend_desc.RenderTarget[0].RenderTargetWriteMask = @intFromEnum(d3d11.D3D11_COLOR_WRITE_ENABLE_ALL);
 
     // TODO: Handle errors better
     var blend_state_result: @TypeOf(state.dx_options.blend_state.?) = undefined;
@@ -619,7 +673,7 @@ fn createSampler(state: *WindowState, interpolation: dvui.enums.TextureInterpola
     state.dx_options.blend_state = blend_state_result;
     state.device_context.OMSetBlendState(state.dx_options.blend_state, null, 0xffffffff);
 
-    var sampler_result: *win32.ID3D11SamplerState = undefined;
+    var sampler_result: *d3d11.ID3D11SamplerState = undefined;
     try resToErr(state.device.CreateSamplerState(&samp_desc, &sampler_result), "CreateSamplerState in createSampler");
     switch (interpolation) {
         .linear => state.dx_options.sampler_linear = sampler_result,
@@ -628,17 +682,22 @@ fn createSampler(state: *WindowState, interpolation: dvui.enums.TextureInterpola
 }
 
 // If you don't know what they are used for... just don't use them, alright?
-fn createBuffer(state: *WindowState, bind_type: anytype, comptime InitialType: type, initial_data: []const InitialType) !*win32.ID3D11Buffer {
-    var bd = std.mem.zeroes(win32.D3D11_BUFFER_DESC);
-    bd.Usage = win32.D3D11_USAGE_DEFAULT;
+fn createBuffer(
+    state: *WindowState,
+    bind_type: anytype,
+    comptime InitialType: type,
+    initial_data: []const InitialType,
+) !*d3d11.ID3D11Buffer {
+    var bd = std.mem.zeroes(d3d11.D3D11_BUFFER_DESC);
+    bd.Usage = d3d11.D3D11_USAGE_DEFAULT;
     bd.ByteWidth = @intCast(@sizeOf(InitialType) * initial_data.len);
     bd.BindFlags = bind_type;
     bd.CPUAccessFlags = .{};
 
-    var data: win32.D3D11_SUBRESOURCE_DATA = undefined;
+    var data: d3d11.D3D11_SUBRESOURCE_DATA = undefined;
     data.pSysMem = @ptrCast(initial_data.ptr);
 
-    var buffer: *win32.ID3D11Buffer = undefined;
+    var buffer: *d3d11.ID3D11Buffer = undefined;
     try resToErr(state.device.CreateBuffer(&bd, &data, &buffer), "CreateBuffer in createBuffer");
 
     // argument no longer pointer-to-optional since zigwin32 update - 2025-01-10
@@ -650,7 +709,14 @@ fn createBuffer(state: *WindowState, bind_type: anytype, comptime InitialType: t
 }
 
 // ############ Satisfy DVUI interfaces ############
-pub fn textureCreate(self: Context, pixels: [*]const u8, width: u32, height: u32, interpolation: dvui.enums.TextureInterpolation, format: dvui.enums.TexturePixelFormat) !dvui.Texture {
+pub fn textureCreate(
+    self: Context,
+    pixels: [*]const u8,
+    width: u32,
+    height: u32,
+    interpolation: dvui.enums.TextureInterpolation,
+    format: dvui.enums.TexturePixelFormat,
+) !dvui.Texture {
     if (format != .rgba_32) {
         log.err("textureCreate currently only supports pixel format .rgba_32", .{});
         return dvui.Backend.TextureError.TextureCreate;
@@ -658,24 +724,24 @@ pub fn textureCreate(self: Context, pixels: [*]const u8, width: u32, height: u32
 
     const state = stateFromHwnd(hwndFromContext(self));
 
-    var texture: *win32.ID3D11Texture2D = undefined;
-    var tex_desc = win32.D3D11_TEXTURE2D_DESC{
+    var texture: *d3d11.ID3D11Texture2D = undefined;
+    var tex_desc = d3d11.D3D11_TEXTURE2D_DESC{
         .Width = width,
         .Height = height,
         .MipLevels = 1,
         .ArraySize = 1,
-        .Format = win32.DXGI_FORMAT.R8G8B8A8_UNORM,
+        .Format = dxgi.DXGI_FORMAT.R8G8B8A8_UNORM,
         .SampleDesc = .{
             .Count = 1,
             .Quality = 0,
         },
-        .Usage = win32.D3D11_USAGE_DEFAULT,
-        .BindFlags = win32.D3D11_BIND_SHADER_RESOURCE,
+        .Usage = d3d11.D3D11_USAGE_DEFAULT,
+        .BindFlags = d3d11.D3D11_BIND_SHADER_RESOURCE,
         .CPUAccessFlags = .{},
         .MiscFlags = .{},
     };
 
-    var resource_data = std.mem.zeroes(win32.D3D11_SUBRESOURCE_DATA);
+    var resource_data = std.mem.zeroes(d3d11.D3D11_SUBRESOURCE_DATA);
     resource_data.pSysMem = pixels;
     resource_data.SysMemPitch = width * 4; // 4 byte per pixel (RGBA)
 
@@ -699,7 +765,7 @@ pub fn textureUpdate(
 ) dvui.Backend.TextureError!void {
     const state = stateFromHwnd(hwndFromContext(self));
     // cast to resource to please the compiler god
-    const tex: *win32.ID3D11Resource = @ptrCast(@alignCast(texture.ptr));
+    const tex: *d3d11.ID3D11Resource = @ptrCast(@alignCast(texture.ptr));
 
     state.device_context.UpdateSubresource(
         tex,
@@ -711,7 +777,13 @@ pub fn textureUpdate(
     );
 }
 
-pub fn textureCreateTarget(self: Context, width: u32, height: u32, interpolation: dvui.enums.TextureInterpolation, format: dvui.enums.TexturePixelFormat) !dvui.TextureTarget {
+pub fn textureCreateTarget(
+    self: Context,
+    width: u32,
+    height: u32,
+    interpolation: dvui.enums.TextureInterpolation,
+    format: dvui.enums.TexturePixelFormat,
+) !dvui.TextureTarget {
     if (format != .rgba_32) {
         log.err("textureCreateTarget currently only supports pixel format .rgba_32", .{});
         return dvui.Backend.TextureError.TextureCreate;
@@ -719,22 +791,22 @@ pub fn textureCreateTarget(self: Context, width: u32, height: u32, interpolation
 
     const state = stateFromHwnd(hwndFromContext(self));
 
-    const texture_desc = win32.D3D11_TEXTURE2D_DESC{
+    const texture_desc = d3d11.D3D11_TEXTURE2D_DESC{
         .Height = height,
         .Width = width,
         .MipLevels = 1,
         .ArraySize = 1,
-        .Format = win32.DXGI_FORMAT.R8G8B8A8_UNORM,
+        .Format = dxgi.DXGI_FORMAT.R8G8B8A8_UNORM,
         .SampleDesc = .{
             .Count = 1,
             .Quality = 0,
         },
-        .Usage = win32.D3D11_USAGE.DEFAULT,
+        .Usage = d3d11.D3D11_USAGE.DEFAULT,
         .BindFlags = .{ .RENDER_TARGET = 1 },
         .CPUAccessFlags = .{},
         .MiscFlags = .{},
     };
-    var texture: *win32.ID3D11Texture2D = undefined;
+    var texture: *d3d11.ID3D11Texture2D = undefined;
     resToErr(
         state.device.CreateTexture2D(&texture_desc, null, &texture),
         "CreateTexture2D target",
@@ -749,26 +821,30 @@ pub fn textureClearTarget(_: Context, _: dvui.TextureTarget) void {
     log.err("textureClearTarget: TODO", .{});
 }
 
-pub fn textureReadTarget(self: Context, texture: dvui.TextureTarget, pixels_out: [*]u8) !void {
+pub fn textureReadTarget(
+    self: Context,
+    texture: dvui.TextureTarget,
+    pixels_out: [*]u8,
+) !void {
     const state = stateFromHwnd(hwndFromContext(self));
-    const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
+    const tex: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
 
-    const texture_desc = win32.D3D11_TEXTURE2D_DESC{
+    const texture_desc = d3d11.D3D11_TEXTURE2D_DESC{
         .Height = texture.height,
         .Width = texture.width,
         .MipLevels = 1,
         .ArraySize = 1,
-        .Format = win32.DXGI_FORMAT.R8G8B8A8_UNORM,
+        .Format = dxgi.DXGI_FORMAT.R8G8B8A8_UNORM,
         .SampleDesc = .{
             .Count = 1,
             .Quality = 0,
         },
-        .Usage = win32.D3D11_USAGE.STAGING,
+        .Usage = d3d11.D3D11_USAGE.STAGING,
         .BindFlags = .{},
         .CPUAccessFlags = .{ .READ = 1 },
         .MiscFlags = .{},
     };
-    var staging: *win32.ID3D11Texture2D = undefined;
+    var staging: *d3d11.ID3D11Texture2D = undefined;
     resToErr(
         state.device.CreateTexture2D(&texture_desc, null, &staging),
         "CreateTexture2D in textureReadTarget",
@@ -778,9 +854,9 @@ pub fn textureReadTarget(self: Context, texture: dvui.TextureTarget, pixels_out:
     state.device_context.CopyResource(&staging.ID3D11Resource, &tex.ID3D11Resource);
     defer state.device_context.Unmap(&staging.ID3D11Resource, 0);
 
-    var mapped: win32.D3D11_MAPPED_SUBRESOURCE = undefined;
+    var mapped: d3d11.D3D11_MAPPED_SUBRESOURCE = undefined;
     resToErr(
-        state.device_context.Map(&staging.ID3D11Resource, 0, win32.D3D11_MAP.READ, 0, &mapped),
+        state.device_context.Map(&staging.ID3D11Resource, 0, d3d11.D3D11_MAP.READ, 0, &mapped),
         "Map in textureReadTarget",
     ) catch return dvui.Backend.TextureError.TextureRead;
 
@@ -798,7 +874,7 @@ pub fn textureReadTarget(self: Context, texture: dvui.TextureTarget, pixels_out:
 pub fn textureDestroy(self: Context, texture: dvui.Texture) void {
     log.debug("Destroying texture @0x{x}", .{@intFromPtr(texture.ptr)});
     const state = stateFromHwnd(hwndFromContext(self));
-    const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
+    const tex: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
     if (!state.texture_interpolation.remove(texture.ptr)) {
         log.err(
             "Destroyed texture @0x{x} that did not have a stored interpolation",
@@ -810,7 +886,7 @@ pub fn textureDestroy(self: Context, texture: dvui.Texture) void {
 
 pub fn textureDestroyTarget(self: Context, texture: dvui.Texture.Target) void {
     const state = stateFromHwnd(hwndFromContext(self));
-    const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
+    const tex: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
     if (!state.texture_interpolation.remove(texture.ptr)) {
         log.err("Destroyed texture that did not have a stored interpolation", .{});
     }
@@ -819,7 +895,7 @@ pub fn textureDestroyTarget(self: Context, texture: dvui.Texture.Target) void {
 
 pub fn textureFromTarget(self: Context, texture: dvui.TextureTarget) !dvui.Texture {
     const state = stateFromHwnd(hwndFromContext(self));
-    const tex_old: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
+    const tex_old: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
     defer _ = tex_old.IUnknown.Release(); // destroy target
 
     // DX11 can't draw target textures, so read all the pixels and make a new texture
@@ -838,7 +914,7 @@ pub fn textureFromTarget(self: Context, texture: dvui.TextureTarget) !dvui.Textu
     const newTex = try self.textureCreate(pixels.ptr, texture.width, texture.height, interpolation, .rgba_32);
 
     // copy
-    const tex_new: *win32.ID3D11Texture2D = @ptrCast(@alignCast(newTex.ptr));
+    const tex_new: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(newTex.ptr));
     state.device_context.CopyResource(@ptrCast(tex_new), @ptrCast(tex_old));
 
     return newTex;
@@ -857,8 +933,8 @@ pub fn textureFromTargetTemp(self: Context, texture: dvui.TextureTarget) !dvui.T
     const newTex = try self.textureCreate(pixels.ptr, texture.width, texture.height, interpolation, .rgba_32);
 
     // copy
-    const tex_old: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
-    const tex_new: *win32.ID3D11Texture2D = @ptrCast(@alignCast(newTex.ptr));
+    const tex_old: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
+    const tex_new: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(newTex.ptr));
     state.device_context.CopyResource(@ptrCast(tex_new), @ptrCast(tex_old));
 
     // not destroying target, mark new texture for destruction
@@ -871,7 +947,7 @@ pub fn renderTarget(self: Context, texture: ?dvui.TextureTarget) !void {
     const state = stateFromHwnd(hwndFromContext(self));
     cleanupRenderTarget(state);
     if (texture) |tex| {
-        const target: *win32.ID3D11Texture2D = @ptrCast(@alignCast(tex.ptr));
+        const target: *d3d11.ID3D11Texture2D = @ptrCast(@alignCast(tex.ptr));
         var render_target: @TypeOf(state.render_target.?) = undefined;
         errdefer state.render_target = null;
         try resToErr(state.device.CreateRenderTargetView(
@@ -894,7 +970,7 @@ pub fn drawClippedTriangles(
     clipr: ?dvui.Rect.Physical,
 ) !void {
     const state = stateFromHwnd(hwndFromContext(self));
-    const client_size = win32.getClientSize(hwndFromContext(self));
+    const client_size = windows.zig.getClientSize(hwndFromContext(self));
     setViewport(state, @floatFromInt(client_size.cx), @floatFromInt(client_size.cy));
 
     if (state.render_target == null) try createRenderTarget(state);
@@ -917,26 +993,37 @@ pub fn drawClippedTriangles(
     if (state.dx_options.vertex_buffer) |vb| {
         _ = vb.IUnknown.Release();
     }
-    state.dx_options.vertex_buffer = try createBuffer(state, win32.D3D11_BIND_VERTEX_BUFFER, SimpleVertex, converted_vtx);
+    state.dx_options.vertex_buffer = try createBuffer(
+        state,
+        d3d11.D3D11_BIND_VERTEX_BUFFER,
+        SimpleVertex,
+        converted_vtx,
+    );
 
     // Do yourself a favour and don't touch it.
     // End() isn't being called all the time, so it's kind of futile.
     if (state.dx_options.index_buffer) |ib| {
         _ = ib.IUnknown.Release();
     }
-    state.dx_options.index_buffer = try createBuffer(state, win32.D3D11_BIND_INDEX_BUFFER, u16, idx);
+    state.dx_options.index_buffer = try createBuffer(
+        state,
+        d3d11.D3D11_BIND_INDEX_BUFFER,
+        u16,
+        idx,
+    );
 
     setViewport(state, @floatFromInt(client_size.cx), @floatFromInt(client_size.cy));
 
     if (texture) |tex| try recreateShaderView(state, tex.ptr);
     const interpolation = if (texture) |tex| state.texture_interpolation.get(tex.ptr) orelse .linear else .linear;
 
-    var scissor_rect: ?win32.RECT = std.mem.zeroes(win32.RECT);
+    var scissor_rect: ?foundation.RECT = std.mem.zeroes(foundation.RECT);
+
     var nums: u32 = 1;
     state.device_context.RSGetScissorRects(&nums, @ptrCast(&scissor_rect));
 
     if (clipr) |cr| {
-        const new_clip: win32.RECT = .{
+        const new_clip: foundation.RECT = .{
             .left = @intFromFloat(cr.x),
             .top = @intFromFloat(cr.y),
             .right = @intFromFloat(cr.x + cr.w),
@@ -947,15 +1034,41 @@ pub fn drawClippedTriangles(
         scissor_rect = null;
     }
 
-    state.device_context.IASetVertexBuffers(0, 1, @ptrCast(&state.dx_options.vertex_buffer), @ptrCast(&stride), @ptrCast(&offset));
-    state.device_context.IASetIndexBuffer(state.dx_options.index_buffer, win32.DXGI_FORMAT.R16_UINT, 0);
-    state.device_context.IASetPrimitiveTopology(win32.D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    state.device_context.IASetVertexBuffers(
+        0,
+        1,
+        @ptrCast(&state.dx_options.vertex_buffer),
+        @ptrCast(&stride),
+        @ptrCast(&offset),
+    );
+    state.device_context.IASetIndexBuffer(
+        state.dx_options.index_buffer,
+        dxgi.DXGI_FORMAT.R16_UINT,
+        0,
+    );
+    state.device_context.IASetPrimitiveTopology(d3d11.D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    state.device_context.OMSetRenderTargets(1, @ptrCast(&state.render_target), null);
-    state.device_context.VSSetShader(state.dx_options.vertex_shader, null, 0);
-    state.device_context.PSSetShader(state.dx_options.pixel_shader, null, 0);
+    state.device_context.OMSetRenderTargets(
+        1,
+        @ptrCast(&state.render_target),
+        null,
+    );
+    state.device_context.VSSetShader(
+        state.dx_options.vertex_shader,
+        null,
+        0,
+    );
+    state.device_context.PSSetShader(
+        state.dx_options.pixel_shader,
+        null,
+        0,
+    );
 
-    state.device_context.PSSetShaderResources(0, 1, @ptrCast(&state.dx_options.texture_view));
+    state.device_context.PSSetShaderResources(
+        0,
+        1,
+        @ptrCast(&state.dx_options.texture_view),
+    );
     state.device_context.PSSetSamplers(0, 1, switch (interpolation) {
         .linear => @ptrCast(&state.dx_options.sampler_linear),
         .nearest => @ptrCast(&state.dx_options.sampler_nearest),
@@ -969,7 +1082,7 @@ pub fn begin(self: Context, arena: std.mem.Allocator) !void {
     state.arena = arena;
 
     const pixel_size = self.pixelSize();
-    var scissor_rect: win32.RECT = .{
+    var scissor_rect: foundation.RECT = .{
         .left = 0,
         .top = 0,
         .right = @intFromFloat(@round(pixel_size.w)),
@@ -989,8 +1102,8 @@ pub fn end(self: Context) !void {
 pub fn pixelSize(self: Context) dvui.Size.Physical {
     const hwnd = hwndFromContext(self);
     const state = stateFromHwnd(hwnd);
-    var rect: win32.RECT = undefined;
-    resToErr(win32.GetClientRect(hwnd, &rect), "GetClientRect in pixelSize") catch return state.last_pixel_size;
+    var rect: foundation.RECT = undefined;
+    resToErr(wnd_msg.GetClientRect(hwnd, &rect), "GetClientRect in pixelSize") catch return state.last_pixel_size;
     std.debug.assert(rect.left == 0);
     std.debug.assert(rect.top == 0);
     state.last_pixel_size = .{
@@ -1006,11 +1119,11 @@ pub fn windowSize(self: Context) dvui.Size.Natural {
     const size = self.pixelSize();
     // apply dpi scaling manually as there is no convenient api to get the window
     // size of the client size. `win32.GetWindowRect` includes window decorations
-    const dpi = win32.GetDpiForWindow(hwnd);
+    const dpi = hi_dpi.GetDpiForWindow(hwnd);
     boolToErr(@intCast(dpi), "GetDpiForWindow in windowSize") catch return state.last_window_size;
     state.last_window_size = .{
-        .w = size.w / win32.scaleFromDpi(f32, dpi),
-        .h = size.h / win32.scaleFromDpi(f32, dpi),
+        .w = size.w / windows.zig.scaleFromDpi(f32, dpi),
+        .h = size.h / windows.zig.scaleFromDpi(f32, dpi),
     };
     return state.last_window_size;
 }
@@ -1039,11 +1152,11 @@ pub fn sleep(_: Context, ns: u64) void {
 
 pub fn clipboardText(self: Context) ![]const u8 {
     const state = stateFromHwnd(hwndFromContext(self));
-    boolToErr(win32.OpenClipboard(hwndFromContext(self)), "OpenClipboard in clipboardText") catch return "";
-    defer boolToErr(win32.CloseClipboard(), "CloseClipboard in clipboardText") catch {};
+    boolToErr(data_exchange.OpenClipboard(hwndFromContext(self)), "OpenClipboard in clipboardText") catch return "";
+    defer boolToErr(data_exchange.CloseClipboard(), "CloseClipboard in clipboardText") catch {};
 
     // istg, windows. why. why utf16.
-    const data_handle = win32.GetClipboardData(@intFromEnum(win32.CF_UNICODETEXT)) orelse {
+    const data_handle = data_exchange.GetClipboardData(@intFromEnum(system_services.CF_UNICODETEXT)) orelse {
         lastErr("GetClipboardData in clipboardText") catch {};
         return "";
     };
@@ -1051,8 +1164,8 @@ pub fn clipboardText(self: Context) ![]const u8 {
     var res: []u8 = undefined;
     {
         const handle: isize = @intCast(@intFromPtr(data_handle));
-        const data: [*:0]u16 = @ptrCast(@alignCast(win32.GlobalLock(handle) orelse return ""));
-        defer boolToErr(win32.GlobalUnlock(handle), "GlobalUnlock in clipboardText") catch {};
+        const data: [*:0]u16 = @ptrCast(@alignCast(memory.GlobalLock(handle) orelse return ""));
+        defer boolToErr(memory.GlobalUnlock(handle), "GlobalUnlock in clipboardText") catch {};
 
         // we want this to be a sane format.
         res = std.unicode.utf16LeToUtf8Alloc(state.arena, std.mem.span(data)) catch |err| switch (err) {
@@ -1066,10 +1179,10 @@ pub fn clipboardText(self: Context) ![]const u8 {
 
 pub fn clipboardTextSet(self: Context, text: []const u8) !void {
     const state = stateFromHwnd(hwndFromContext(self));
-    boolToErr(win32.OpenClipboard(hwndFromContext(self)), "OpenClipboard in clipboardTextSet") catch return;
-    defer boolToErr(win32.CloseClipboard(), "CloseClipboard in clipboardTextSet") catch {};
+    boolToErr(data_exchange.OpenClipboard(hwndFromContext(self)), "OpenClipboard in clipboardTextSet") catch return;
+    defer boolToErr(data_exchange.CloseClipboard(), "CloseClipboard in clipboardTextSet") catch {};
 
-    const handle = win32.GlobalAlloc(win32.GMEM_MOVEABLE, text.len * @sizeOf(u16) + 1); // don't forget the nullbyte
+    const handle = memory.GlobalAlloc(memory.GMEM_MOVEABLE, text.len * @sizeOf(u16) + 1); // don't forget the nullbyte
     if (handle == 0) return std.mem.Allocator.Error.OutOfMemory;
 
     const as_utf16 = std.unicode.utf8ToUtf16LeAlloc(state.arena, text) catch |err| switch (err) {
@@ -1078,16 +1191,16 @@ pub fn clipboardTextSet(self: Context, text: []const u8) !void {
     };
     defer state.arena.free(as_utf16);
 
-    const data: [*:0]u16 = @ptrCast(@alignCast(win32.GlobalLock(handle) orelse return));
-    defer boolToErr(win32.GlobalUnlock(handle), "GlobalUnlock in clipboardTextSet") catch {};
+    const data: [*:0]u16 = @ptrCast(@alignCast(memory.GlobalLock(handle) orelse return));
+    defer boolToErr(memory.GlobalUnlock(handle), "GlobalUnlock in clipboardTextSet") catch {};
 
     for (as_utf16, 0..) |wide, i| {
         data[i] = wide;
     }
 
-    try boolToErr(win32.EmptyClipboard(), "EmptyClipboard in clipboardTextSet");
+    try boolToErr(data_exchange.EmptyClipboard(), "EmptyClipboard in clipboardTextSet");
     const handle_usize: usize = @intCast(handle);
-    _ = win32.SetClipboardData(@intFromEnum(win32.CF_UNICODETEXT), @ptrFromInt(handle_usize)) orelse try lastErr("SetClipboardData in clipboardTextSet");
+    _ = data_exchange.SetClipboardData(@intFromEnum(system_services.CF_UNICODETEXT), @ptrFromInt(handle_usize)) orelse try lastErr("SetClipboardData in clipboardTextSet");
 }
 
 pub fn openURL(self: Context, url: []const u8, _: bool) !void {
@@ -1100,13 +1213,13 @@ pub fn openURL(self: Context, url: []const u8, _: bool) !void {
     };
     defer arena.free(win_url);
 
-    _ = win32.ShellExecuteW(
+    _ = windows.ui.shell.ShellExecuteW(
         hwnd,
-        win32.L("open"),
+        windows.zig.L("open"),
         win_url,
         null,
         null,
-        win32.SW_SHOW.SHOWNORMAL,
+        wnd_msg.SW_SHOW.SHOWNORMAL,
     );
 }
 
@@ -1119,18 +1232,18 @@ pub fn prefersReducedMotion(_: Context) bool {
 }
 
 pub fn cursorShow(_: Context, value: ?bool) !bool {
-    var info: win32.CURSORINFO = undefined;
-    info.cbSize = @sizeOf(win32.CURSORINFO);
-    try boolToErr(win32.GetCursorInfo(&info), "GetCursorInfo in cursorShow");
-    const prev = info.flags == win32.CURSOR_SHOWING;
+    var info: wnd_msg.CURSORINFO = undefined;
+    info.cbSize = @sizeOf(wnd_msg.CURSORINFO);
+    try boolToErr(wnd_msg.GetCursorInfo(&info), "GetCursorInfo in cursorShow");
+    const prev = info.flags == wnd_msg.CURSOR_SHOWING;
     if (value) |val| {
         // Count == 0 will hide cursor. Any value greater than 0 will show it
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor#remarks
-        const count = win32.ShowCursor(if (val) win32.TRUE else win32.FALSE);
+        const count = wnd_msg.ShowCursor(if (val) TRUE else FALSE);
         if (!val and count > 0) {
             // Keep hiding cursor until it's hidden
             for (0..@intCast(count)) |_| {
-                if (win32.ShowCursor(win32.FALSE) == 0) break;
+                if (wnd_msg.ShowCursor(FALSE) == 0) break;
             }
         }
     }
@@ -1153,45 +1266,45 @@ pub fn setCursor(ctx: Context, cursor: dvui.enums.Cursor) !void {
     }
 
     const converted_cursor = switch (cursor) {
-        .arrow => win32.IDC_ARROW,
-        .ibeam => win32.IDC_IBEAM,
-        .wait, .wait_arrow => win32.IDC_WAIT,
-        .crosshair => win32.IDC_CROSS,
-        .arrow_nw_se => win32.IDC_SIZENWSE,
-        .arrow_ne_sw => win32.IDC_SIZENESW,
-        .arrow_w_e => win32.IDC_SIZEWE,
-        .arrow_n_s => win32.IDC_SIZENS,
-        .arrow_all => win32.IDC_SIZEALL,
-        .bad => win32.IDC_NO,
-        .hand => win32.IDC_HAND,
+        .arrow => wnd_msg.IDC_ARROW,
+        .ibeam => wnd_msg.IDC_IBEAM,
+        .wait, .wait_arrow => wnd_msg.IDC_WAIT,
+        .crosshair => wnd_msg.IDC_CROSS,
+        .arrow_nw_se => wnd_msg.IDC_SIZENWSE,
+        .arrow_ne_sw => wnd_msg.IDC_SIZENESW,
+        .arrow_w_e => wnd_msg.IDC_SIZEWE,
+        .arrow_n_s => wnd_msg.IDC_SIZENS,
+        .arrow_all => wnd_msg.IDC_SIZEALL,
+        .bad => wnd_msg.IDC_NO,
+        .hand => wnd_msg.IDC_HAND,
         .hidden => unreachable,
     };
 
-    if (win32.LoadCursorW(null, converted_cursor)) |hcursor| {
+    if (wnd_msg.LoadCursorW(null, converted_cursor)) |hcursor| {
         // NOTE: We set the class cursor because using win32.setCursor requires handling win32.WN_SETCURSOR
         // and messes with the default resize cursors of the window.
-        _ = win32.SetClassLongPtrW(
+        _ = windowlongptr.SetWindowLongPtrW(
             hwndFromContext(ctx),
-            win32.GCLP_HCURSOR, // change cursor
+            wnd_msg.GCLP_HCURSOR, // change cursor
             @intCast(@intFromPtr(hcursor)),
         );
     }
 }
 
-pub fn hwndFromContext(ctx: Context) win32.HWND {
+pub fn hwndFromContext(ctx: Context) HWND {
     return @ptrCast(ctx);
 }
-pub fn contextFromHwnd(hwnd: win32.HWND) Context {
+pub fn contextFromHwnd(hwnd: HWND) Context {
     return @ptrCast(hwnd);
 }
-fn stateFromHwnd(hwnd: win32.HWND) *WindowState {
-    const addr: usize = @bitCast(win32.GetWindowLongPtrW(hwnd, win32.WINDOW_LONG_PTR_INDEX._USERDATA));
+fn stateFromHwnd(hwnd: HWND) *WindowState {
+    const addr: usize = @bitCast(windowlongptr.GetWindowLongPtrW(hwnd, .P_USERDATA));
     if (addr == 0) @panic("window is missing it's state!");
     return @ptrFromInt(addr);
 }
 
 pub fn attach(
-    hwnd: win32.HWND,
+    hwnd: HWND,
     window_state: *WindowState,
     gpa: std.mem.Allocator,
     dx_options: Directx11Options,
@@ -1200,14 +1313,14 @@ pub fn attach(
         window_init_opts: dvui.Window.InitOptions = .{},
     },
 ) !Context {
-    const existing = win32.SetWindowLongPtrW(
+    const existing = windowlongptr.SetWindowLongPtrW(
         hwnd,
-        win32.WINDOW_LONG_PTR_INDEX._USERDATA,
+        .P_USERDATA,
         @bitCast(@intFromPtr(window_state)),
     );
     if (existing != 0) std.debug.panic("hwnd is already using slot 0 for something? (0x{x})", .{existing});
 
-    const addr: usize = @bitCast(win32.GetWindowLongPtrW(hwnd, win32.WINDOW_LONG_PTR_INDEX._USERDATA));
+    const addr: usize = @bitCast(windowlongptr.GetWindowLongPtrW(hwnd, .P_USERDATA));
     if (addr == 0) @panic("unable to attach window state pointer to HWND, did you set cbWndExtra to be >= to @sizeof(usize)?");
 
     const ctx = contextFromHwnd(hwnd).backend();
@@ -1231,14 +1344,14 @@ pub fn attach(
 
 // ############ Event Handling via wnd proc ############
 pub fn wndProc(
-    hwnd: win32.HWND,
+    hwnd: HWND,
     umsg: u32,
-    wparam: win32.WPARAM,
-    lparam: win32.LPARAM,
-) callconv(.winapi) win32.LRESULT {
+    wparam: foundation.WPARAM,
+    lparam: foundation.LPARAM,
+) callconv(.winapi) foundation.LRESULT {
     switch (umsg) {
-        win32.WM_CREATE => {
-            const create_struct: *win32.CREATESTRUCTW = @ptrFromInt(@as(usize, @bitCast(lparam)));
+        wnd_msg.WM_CREATE => {
+            const create_struct: *wnd_msg.CREATESTRUCTW = @ptrFromInt(@as(usize, @bitCast(lparam)));
             const args: *CreateWindowArgs = @ptrCast(@alignCast(create_struct.lpCreateParams));
             const dx_options = createDeviceD3D(hwnd) orelse {
                 args.err = error.D3dDeviceInitFailed;
@@ -1255,28 +1368,28 @@ pub fn wndProc(
             };
             return 0;
         },
-        win32.WM_DESTROY => {
+        wnd_msg.WM_DESTROY => {
             const state = stateFromHwnd(hwnd);
-            if (!state.event_processing) return win32.DefWindowProcW(hwnd, umsg, wparam, lparam);
+            if (!state.event_processing) return wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam);
 
             state.deinit();
             return 0;
         },
-        win32.WM_CLOSE => {
+        wnd_msg.WM_CLOSE => {
             const state = stateFromHwnd(hwnd);
             // important not call DefWindowProc here because that will destroy the window
             // without notifying the app
             state.dvui_window.addEventWindow(.{ .action = .close }) catch {};
             return 0;
         },
-        win32.WM_PAINT => {
-            var ps: win32.PAINTSTRUCT = undefined;
-            if (win32.BeginPaint(hwnd, &ps) == null) lastErr("BeginPaint") catch return -1;
-            boolToErr(win32.EndPaint(hwnd, &ps), "EndPaint") catch return -1;
+        wnd_msg.WM_PAINT => {
+            var ps: gdi.PAINTSTRUCT = undefined;
+            if (gdi.BeginPaint(hwnd, &ps) == null) lastErr("BeginPaint") catch return -1;
+            boolToErr(gdi.EndPaint(hwnd, &ps), "EndPaint") catch return -1;
             return 0;
         },
-        win32.WM_SIZE => {
-            const size = win32.getClientSize(hwnd);
+        wnd_msg.WM_SIZE => {
+            const size = windows.zig.getClientSize(hwnd);
             //const resize: packed struct { width: i16, height: i16, _upper: i32 } = @bitCast(lparam);
             // instance.options.size.w = @floatFromInt(resize.width);
             // instance.options.size.h = @floatFromInt(resize.height);
@@ -1286,21 +1399,21 @@ pub fn wndProc(
             return 0;
         },
         // All mouse events
-        win32.WM_LBUTTONDOWN,
-        win32.WM_LBUTTONDBLCLK,
-        win32.WM_RBUTTONDOWN,
-        win32.WM_MBUTTONDOWN,
-        win32.WM_XBUTTONDOWN,
-        win32.WM_LBUTTONUP,
-        win32.WM_RBUTTONUP,
-        win32.WM_MBUTTONUP,
-        win32.WM_XBUTTONUP,
+        wnd_msg.WM_LBUTTONDOWN,
+        wnd_msg.WM_LBUTTONDBLCLK,
+        wnd_msg.WM_RBUTTONDOWN,
+        wnd_msg.WM_MBUTTONDOWN,
+        wnd_msg.WM_XBUTTONDOWN,
+        wnd_msg.WM_LBUTTONUP,
+        wnd_msg.WM_RBUTTONUP,
+        wnd_msg.WM_MBUTTONUP,
+        wnd_msg.WM_XBUTTONUP,
         => |msg| {
             const button: dvui.enums.Button = switch (msg) {
-                win32.WM_LBUTTONDOWN, win32.WM_LBUTTONDBLCLK, win32.WM_LBUTTONUP => .left,
-                win32.WM_RBUTTONDOWN, win32.WM_RBUTTONUP => .right,
-                win32.WM_MBUTTONDOWN, win32.WM_MBUTTONUP => .middle,
-                win32.WM_XBUTTONDOWN, win32.WM_XBUTTONUP => switch (win32.hiword(wparam)) {
+                wnd_msg.WM_LBUTTONDOWN, wnd_msg.WM_LBUTTONDBLCLK, wnd_msg.WM_LBUTTONUP => .left,
+                wnd_msg.WM_RBUTTONDOWN, wnd_msg.WM_RBUTTONUP => .right,
+                wnd_msg.WM_MBUTTONDOWN, wnd_msg.WM_MBUTTONUP => .middle,
+                wnd_msg.WM_XBUTTONDOWN, wnd_msg.WM_XBUTTONUP => switch (windows.zig.hiword(wparam)) {
                     0x0001 => .four,
                     0x0002 => .five,
                     else => unreachable,
@@ -1309,32 +1422,32 @@ pub fn wndProc(
             };
 
             const is_button_down: bool = switch (msg) {
-                win32.WM_LBUTTONDOWN, win32.WM_RBUTTONDOWN, win32.WM_MBUTTONDOWN, win32.WM_XBUTTONDOWN => true,
+                wnd_msg.WM_LBUTTONDOWN, wnd_msg.WM_RBUTTONDOWN, wnd_msg.WM_MBUTTONDOWN, wnd_msg.WM_XBUTTONDOWN => true,
                 else => false
             };
 
             // ensure mouse up signal is sent if cursor leaves window while held down
             if (is_button_down) {
                 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcapture
-                _ = win32.SetCapture(hwnd);
+                _ = keyboard_and_mouse.SetCapture(hwnd);
             } else {
                 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasecapture
-                _ = win32.ReleaseCapture();
+                _ = keyboard_and_mouse.ReleaseCapture();
             }
 
             _ = stateFromHwnd(hwnd).dvui_window.addEventMouseButton(
                 button,
                 switch (msg) {
-                    win32.WM_LBUTTONDOWN, win32.WM_LBUTTONDBLCLK, win32.WM_RBUTTONDOWN, win32.WM_MBUTTONDOWN, win32.WM_XBUTTONDOWN => .press,
-                    win32.WM_LBUTTONUP, win32.WM_RBUTTONUP, win32.WM_MBUTTONUP, win32.WM_XBUTTONUP => .release,
+                    wnd_msg.WM_LBUTTONDOWN, wnd_msg.WM_LBUTTONDBLCLK, wnd_msg.WM_RBUTTONDOWN, wnd_msg.WM_MBUTTONDOWN, wnd_msg.WM_XBUTTONDOWN => .press,
+                    wnd_msg.WM_LBUTTONUP, wnd_msg.WM_RBUTTONUP, wnd_msg.WM_MBUTTONUP, wnd_msg.WM_XBUTTONUP => .release,
                     else => unreachable,
                 },
             ) catch {};
             return 0;
         },
-        win32.WM_MOUSEMOVE => {
-            const x = win32.xFromLparam(lparam);
-            const y = win32.yFromLparam(lparam);
+        wnd_msg.WM_MOUSEMOVE => {
+            const x = windows.zig.xFromLparam(lparam);
+            const y = windows.zig.yFromLparam(lparam);
             _ = stateFromHwnd(hwnd).dvui_window.addEventMouseMotion(
                 .{
                     .pt = .{ .x = @floatFromInt(x), .y = @floatFromInt(y) },
@@ -1342,35 +1455,35 @@ pub fn wndProc(
             ) catch {};
             return 0;
         },
-        win32.WM_MOUSEWHEEL,
-        win32.WM_MOUSEHWHEEL,
+        wnd_msg.WM_MOUSEWHEEL,
+        wnd_msg.WM_MOUSEHWHEEL,
         => |msg| {
-            const delta: i16 = @bitCast(win32.hiword(wparam));
+            const delta: i16 = @bitCast(windows.zig.hiword(wparam));
             const float_delta: f32 = @floatFromInt(delta);
-            const wheel_delta: f32 = @floatFromInt(win32.WHEEL_DELTA);
+            const wheel_delta: f32 = @floatFromInt(wnd_msg.WHEEL_DELTA);
             const ticks = float_delta / wheel_delta * dvui.scroll_speed;
             _ = stateFromHwnd(hwnd).dvui_window.addEventMouseWheel(
                 switch (msg) {
-                    win32.WM_MOUSEWHEEL => ticks,
-                    win32.WM_MOUSEHWHEEL => -ticks,
+                    wnd_msg.WM_MOUSEWHEEL => ticks,
+                    wnd_msg.WM_MOUSEHWHEEL => -ticks,
                     else => unreachable,
                 },
                 switch (msg) {
-                    win32.WM_MOUSEWHEEL => .vertical,
-                    win32.WM_MOUSEHWHEEL => .horizontal,
+                    wnd_msg.WM_MOUSEWHEEL => .vertical,
+                    wnd_msg.WM_MOUSEHWHEEL => .horizontal,
                     else => unreachable,
                 },
             ) catch {};
             return 0;
         },
         // All key events
-        win32.WM_KEYUP,
-        win32.WM_SYSKEYUP,
-        win32.WM_KEYDOWN,
-        win32.WM_SYSKEYDOWN,
+        wnd_msg.WM_KEYUP,
+        wnd_msg.WM_SYSKEYUP,
+        wnd_msg.WM_KEYDOWN,
+        wnd_msg.WM_SYSKEYDOWN,
         => |msg| {
             const state = stateFromHwnd(hwnd);
-            if (!state.event_processing) return win32.DefWindowProcW(hwnd, umsg, wparam, lparam);
+            if (!state.event_processing) return wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam);
 
             // https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#keystroke-message-flags
             const KeystrokeMessageFlags = packed struct(u32) {
@@ -1394,18 +1507,18 @@ pub fn wndProc(
             };
             const info: KeystrokeMessageFlags = @bitCast(@as(i32, @truncate(lparam)));
 
-            if (std.enums.fromInt(win32.VIRTUAL_KEY, wparam)) |as_vkey| {
+            if (std.enums.fromInt(keyboard_and_mouse.VIRTUAL_KEY, wparam)) |as_vkey| {
                 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate
                 // NOTE: If the key is pressed, the most significant bit is set.
                 //       For a signed integer that means it's a negative number
                 //       if the key is currently down.
                 var mods = dvui.enums.Mod.none;
-                if (win32.GetAsyncKeyState(@intFromEnum(win32.VK_LSHIFT)) < 0) mods.combine(.lshift);
-                if (win32.GetAsyncKeyState(@intFromEnum(win32.VK_RSHIFT)) < 0) mods.combine(.rshift);
-                if (win32.GetAsyncKeyState(@intFromEnum(win32.VK_LCONTROL)) < 0) mods.combine(.lcontrol);
-                if (win32.GetAsyncKeyState(@intFromEnum(win32.VK_RCONTROL)) < 0) mods.combine(.rcontrol);
-                if (win32.GetAsyncKeyState(@intFromEnum(win32.VK_LMENU)) < 0) mods.combine(.lalt);
-                if (win32.GetAsyncKeyState(@intFromEnum(win32.VK_RMENU)) < 0) mods.combine(.ralt);
+                if (keyboard_and_mouse.GetAsyncKeyState(@intFromEnum(keyboard_and_mouse.VK_LSHIFT)) < 0) mods.combine(.lshift);
+                if (keyboard_and_mouse.GetAsyncKeyState(@intFromEnum(keyboard_and_mouse.VK_RSHIFT)) < 0) mods.combine(.rshift);
+                if (keyboard_and_mouse.GetAsyncKeyState(@intFromEnum(keyboard_and_mouse.VK_LCONTROL)) < 0) mods.combine(.lcontrol);
+                if (keyboard_and_mouse.GetAsyncKeyState(@intFromEnum(keyboard_and_mouse.VK_RCONTROL)) < 0) mods.combine(.rcontrol);
+                if (keyboard_and_mouse.GetAsyncKeyState(@intFromEnum(keyboard_and_mouse.VK_LMENU)) < 0) mods.combine(.lalt);
+                if (keyboard_and_mouse.GetAsyncKeyState(@intFromEnum(keyboard_and_mouse.VK_RMENU)) < 0) mods.combine(.ralt);
                 // Command mods would be the windows key, which we do not handle
 
                 const code = convertVKeyToDvuiKey(as_vkey);
@@ -1413,8 +1526,8 @@ pub fn wndProc(
                 _ = state.dvui_window.addEventKey(.{
                     .code = code,
                     .action = switch (msg) {
-                        win32.WM_KEYDOWN, win32.WM_SYSKEYDOWN => if (info.was_key_down) .repeat else .down,
-                        win32.WM_KEYUP, win32.WM_SYSKEYUP => .up,
+                        wnd_msg.WM_KEYDOWN, wnd_msg.WM_SYSKEYDOWN => if (info.was_key_down) .repeat else .down,
+                        wnd_msg.WM_KEYUP, wnd_msg.WM_SYSKEYUP => .up,
                         else => unreachable,
                     },
                     .mod = mods,
@@ -1431,13 +1544,13 @@ pub fn wndProc(
                 log.err("invalid key found", .{});
             }
             return switch (msg) {
-                win32.WM_SYSKEYDOWN, win32.WM_SYSKEYUP => win32.DefWindowProcW(hwnd, umsg, wparam, lparam),
+                wnd_msg.WM_SYSKEYDOWN, wnd_msg.WM_SYSKEYUP => wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam),
                 else => 0,
             };
         },
-        win32.WM_CHAR => {
+        wnd_msg.WM_CHAR => {
             const state = stateFromHwnd(hwnd);
-            if (!state.event_processing) return win32.DefWindowProcW(hwnd, umsg, wparam, lparam);
+            if (!state.event_processing) return wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam);
 
             const ascii_char: u8 = @truncate(wparam);
             if (std.ascii.isPrint(ascii_char)) {
@@ -1446,7 +1559,7 @@ pub fn wndProc(
             }
             return 0;
         },
-        win32.WM_SETFOCUS, win32.WM_EXITSIZEMOVE, win32.WM_EXITMENULOOP => {
+        wnd_msg.WM_SETFOCUS, wnd_msg.WM_EXITSIZEMOVE, wnd_msg.WM_EXITMENULOOP => {
             if (dvui.accesskit_enabled and stateFromHwnd(hwnd).dvui_window.accesskit.status != .off) {
                 const events = dvui.AccessKit.c.accesskit_windows_adapter_update_window_focus_state(stateFromHwnd(hwnd).dvui_window.accesskit.adapter, true);
                 if (events) |_| {
@@ -1455,7 +1568,7 @@ pub fn wndProc(
             }
             return 0;
         },
-        win32.WM_KILLFOCUS, win32.WM_ENTERSIZEMOVE, win32.WM_ENTERMENULOOP => {
+        wnd_msg.WM_KILLFOCUS, wnd_msg.WM_ENTERSIZEMOVE, wnd_msg.WM_ENTERMENULOOP => {
             if (dvui.accesskit_enabled and stateFromHwnd(hwnd).dvui_window.accesskit.status != .off) {
                 const events = dvui.AccessKit.c.accesskit_windows_adapter_update_window_focus_state(stateFromHwnd(hwnd).dvui_window.accesskit.adapter, false);
                 if (events) |_| {
@@ -1464,9 +1577,9 @@ pub fn wndProc(
             }
             return 0;
         },
-        win32.WM_GETOBJECT => {
+        wnd_msg.WM_GETOBJECT => {
             const state = stateFromHwnd(hwnd);
-            if (!state.event_processing) return win32.DefWindowProcW(hwnd, umsg, wparam, lparam);
+            if (!state.event_processing) return wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam);
 
             if (dvui.accesskit_enabled) {
                 const ak = state.dvui_window.accesskit;
@@ -1483,9 +1596,9 @@ pub fn wndProc(
                     }
                 };
             }
-            return win32.DefWindowProcW(hwnd, umsg, wparam, lparam);
+            return wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam);
         },
-        else => return win32.DefWindowProcW(hwnd, umsg, wparam, lparam),
+        else => return wnd_msg.DefWindowProcW(hwnd, umsg, wparam, lparam),
     }
 }
 
@@ -1529,59 +1642,62 @@ const CreateWindowArgs = struct {
     err: ?anyerror = null,
 };
 
-fn createDeviceD3D(hwnd: win32.HWND) ?Directx11Options {
-    const client_size = win32.getClientSize(hwnd);
+fn createDeviceD3D(hwnd: HWND) ?Directx11Options {
+    const client_size = windows.zig.getClientSize(hwnd);
 
-    var sd = std.mem.zeroes(win32.DXGI_SWAP_CHAIN_DESC);
+    var sd = std.mem.zeroes(dxgi.DXGI_SWAP_CHAIN_DESC);
     sd.BufferCount = 6;
     sd.BufferDesc.Width = @intCast(client_size.cx);
     sd.BufferDesc.Height = @intCast(client_size.cy);
-    sd.BufferDesc.Format = win32.DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.BufferDesc.Format = dxgi.DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.BufferDesc.RefreshRate.Numerator = 60;
     sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.Flags = @intFromEnum(win32.DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
-    sd.BufferUsage = win32.DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.Flags = @intFromEnum(dxgi.DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+    sd.BufferUsage = dxgi.DXGI_USAGE_RENDER_TARGET_OUTPUT;
     @setRuntimeSafety(false);
     sd.OutputWindow = hwnd;
     @setRuntimeSafety(true);
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;
     sd.Windowed = 1;
-    sd.SwapEffect = win32.DXGI_SWAP_EFFECT_DISCARD;
+    sd.SwapEffect = dxgi.DXGI_SWAP_EFFECT_DISCARD;
 
-    const createDeviceFlags: win32.D3D11_CREATE_DEVICE_FLAG = .{
+    const createDeviceFlags: d3d11.D3D11_CREATE_DEVICE_FLAG = .{
         .DEBUG = 0,
     };
     //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-    var featureLevel: win32.D3D_FEATURE_LEVEL = undefined;
-    const featureLevelArray = &[_]win32.D3D_FEATURE_LEVEL{ win32.D3D_FEATURE_LEVEL_11_0, win32.D3D_FEATURE_LEVEL_10_0 };
+    var featureLevel: d3d.D3D_FEATURE_LEVEL = undefined;
+    const featureLevelArray = &[_]d3d.D3D_FEATURE_LEVEL{
+        d3d.D3D_FEATURE_LEVEL_11_0,
+        d3d.D3D_FEATURE_LEVEL_10_0,
+    };
 
-    var device: *win32.ID3D11Device = undefined;
-    var device_context: *win32.ID3D11DeviceContext = undefined;
-    var swap_chain: *win32.IDXGISwapChain = undefined;
+    var device: *d3d11.ID3D11Device = undefined;
+    var device_context: *d3d11.ID3D11DeviceContext = undefined;
+    var swap_chain: *dxgi.IDXGISwapChain = undefined;
 
-    resToErr(switch (win32.D3D11CreateDeviceAndSwapChain(
+    resToErr(switch (d3d11.D3D11CreateDeviceAndSwapChain(
         null,
-        win32.D3D_DRIVER_TYPE_HARDWARE,
+        d3d.D3D_DRIVER_TYPE_HARDWARE,
         null,
         createDeviceFlags,
         featureLevelArray,
         2,
-        win32.D3D11_SDK_VERSION,
+        d3d11.D3D11_SDK_VERSION,
         &sd,
         &swap_chain,
         &device,
         &featureLevel,
         &device_context,
     )) {
-        win32.DXGI_ERROR_UNSUPPORTED => win32.D3D11CreateDeviceAndSwapChain(
+        dxgi.DXGI_ERROR_UNSUPPORTED => d3d11.D3D11CreateDeviceAndSwapChain(
             null,
-            win32.D3D_DRIVER_TYPE_WARP,
+            d3d.D3D_DRIVER_TYPE_WARP,
             null,
             createDeviceFlags,
             featureLevelArray,
             2,
-            win32.D3D11_SDK_VERSION,
+            d3d11.D3D11_SDK_VERSION,
             &sd,
             &swap_chain,
             &device,
@@ -1598,7 +1714,7 @@ fn createDeviceD3D(hwnd: win32.HWND) ?Directx11Options {
     };
 }
 
-fn convertVKeyToDvuiKey(vkey: win32.VIRTUAL_KEY) dvui.enums.Key {
+fn convertVKeyToDvuiKey(vkey: keyboard_and_mouse.VIRTUAL_KEY) dvui.enums.Key {
     const K = dvui.enums.Key;
     return switch (vkey) {
         .@"0" => .zero,
@@ -1724,11 +1840,11 @@ pub fn main(init: std.process.Init) !void {
 
     const app = dvui.App.get() orelse return error.DvuiAppNotDefined;
 
-    const window_class = win32.L("DvuiWindow");
+    const window_class = windows.zig.L("DvuiWindow");
 
-    RegisterClass(window_class, .{}) catch win32.panicWin32(
+    RegisterClass(window_class, .{}) catch windows.zig.panicWin32(
         "RegisterClass",
-        win32.GetLastError(),
+        foundation.GetLastError(),
     );
 
     const init_opts = app.config.get();
@@ -1795,6 +1911,6 @@ pub fn main(init: std.process.Init) !void {
 }
 
 test {
-    //std.debug.print("dx11 backend test\n", .{});
+    //std.debug.print("dcomp backend test\n", .{});
     std.testing.refAllDecls(@This());
 }
